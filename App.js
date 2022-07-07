@@ -10,8 +10,19 @@ import Ball from './Ball';
 const { width, height } = Dimensions.get("screen");
 const entitySize = Math.trunc(Math.max(width, height) * 0.025);
 
-const initialPlayer = Matter.Bodies.trapezoid(0, height / 5 * 3, entitySize, entitySize, 1);
-const initialBall = Matter.Bodies.circle(0, 0, entitySize / 2);
+const initialPlayer = Matter.Bodies.trapezoid(width / 2, height / 5 * 3, entitySize, entitySize, 1, {isStatic: true});
+const initialBall = Matter.Bodies.circle(width / 2 + 1, 0, entitySize / 2);
+
+const engine = Matter.Engine.create({ enableSleeping: false });
+const world = engine.world;
+
+Matter.World.add(world, [initialPlayer, initialBall]);
+
+const Physics = (entities, { time }) => {
+  let engine = entities["physics"].engine;
+  Matter.Engine.update(engine, time.delta);
+  return entities;
+};
 
 const HomeScreen = ({ navigation }) => {
   return (
@@ -28,19 +39,25 @@ const HomeScreen = ({ navigation }) => {
 }
 
 const GameScreen = () => {
-
   return (
     <GameEngine
-      style={styles.container}
+      style={styles.game}
+      systems={[Physics]}
       entities={{
+        physics: {
+          engine: engine,
+          world: world
+        },
         initialPlayer: {
-          size: entitySize,
-          position: [initialPlayer.position.x, initialPlayer.position.y],
+          body: initialPlayer,
+          size: [entitySize, entitySize],
+          color: 'red',
           renderer: Player
         },
         initialBall: {
-          size: entitySize,
-          position: [initialBall.position.x, initialBall.position.y],
+          body: initialBall,
+          size: [entitySize, entitySize],
+          color: 'red',
           renderer: Ball
         }
       }}
@@ -68,7 +85,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-around'
   },
   welcomeText: {
     color: '#8080ff',
@@ -88,5 +105,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     fontSize: 25
+  },
+  game: {
+    flex: 1,
+    backgroundColor: '#777',
   }
 });
