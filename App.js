@@ -1,7 +1,17 @@
-import { StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { StatusBar, StyleSheet, Text, View, TouchableOpacity, Dimensions } from 'react-native';
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import Matter from "matter-js";
+import { GameEngine } from "react-native-game-engine";
+import Player from './Player';
+import Ball from './Ball';
+
+const { width, height } = Dimensions.get("screen");
+const entitySize = Math.trunc(Math.max(width, height) * 0.025);
+
+const initialPlayer = Matter.Bodies.trapezoid(0, height / 5 * 3, entitySize, entitySize, 1);
+const initialBall = Matter.Bodies.circle(0, 0, entitySize / 2);
 
 const HomeScreen = ({ navigation }) => {
   return (
@@ -18,10 +28,25 @@ const HomeScreen = ({ navigation }) => {
 }
 
 const GameScreen = () => {
+
   return (
-    <View style={styles.container}>
-      <Text>Game screen</Text>
-    </View>
+    <GameEngine
+      style={styles.container}
+      entities={{
+        initialPlayer: {
+          size: entitySize,
+          position: [initialPlayer.position.x, initialPlayer.position.y],
+          renderer: Player
+        },
+        initialBall: {
+          size: entitySize,
+          position: [initialBall.position.x, initialBall.position.y],
+          renderer: Ball
+        }
+      }}
+    >
+      <StatusBar hidden={true} />
+    </GameEngine>
   );
 }
 
