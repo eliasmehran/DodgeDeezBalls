@@ -1,4 +1,4 @@
-import { StatusBar, StyleSheet, Text, View, TouchableOpacity, Dimensions } from 'react-native';
+import { StatusBar, StyleSheet, Text, View, TouchableOpacity, Dimensions, Vibration, Alert } from 'react-native';
 import * as React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,33 +9,23 @@ import Ball from './Ball';
 import { Gyroscope, Accelerometer } from 'expo-sensors';
 import { useState, useEffect } from 'react';
 
-const engine = Matter.Engine.create({ enableSleeping: false });
-const world = engine.world;
-const gravity = world.gravity;
+let engine = Matter.Engine.create({ enableSleeping: false });
+let world = engine.world;
+let gravity = world.gravity;
 
 const randInt = (min, max) => { return Math.floor(Math.random() * (max - min + 1) + min) - 1; };
 const randomColor = () => { return Math.floor(Math.random() * 16777215).toString(16); }
 function round(n) { return Math.floor(n * 100) / 100; }
 
 const { width, height } = Dimensions.get("screen");
-const entitySize = Math.trunc(Math.max(width, height) * 0.03);
+const entitySize = Math.trunc(Math.max(width, height) * 0.035);
 
-let player = Matter.Bodies.trapezoid(width / 2, height / 5 * 3, entitySize, entitySize, 1);
+let player = Matter.Bodies.trapezoid(width / 2, height / 6 * 4, entitySize, entitySize, 1);
 let balls = [];
 for (let i = 0; i < 16; i++) {
   let ball = Matter.Bodies.circle(width / 8 * i + 1, -height * i, entitySize / 2., { frictionAir: 0.025, restitution: 1.0 });
   balls.push(ball);
   Matter.World.add(world, [balls[i]]);
-}
-
-const reset = () => {
-  player = Matter.Bodies.trapezoid(width / 2, height / 5 * 3, entitySize, entitySize, 1);
- balls = [];
-for (let i = 0; i < 16; i++) {
-  let ball = Matter.Bodies.circle(width / 8 * i + 1, -height * i, entitySize / 2., { frictionAir: 0.025, restitution: 1.0 });
-  balls.push(ball);
-  Matter.World.add(world, [balls[i]]);
-}
 }
 
 Matter.World.add(world, [player]);
@@ -45,11 +35,13 @@ let framesDelta = 0;
 const ballInterval = 12;
 let tilt = 0;
 const speed = 15;
+let score = 0;
 
 const Physics = (entities, { time }) => {
   let engine = entities["physics"].engine;
   Matter.Engine.update(engine, time.delta);
   framesDelta++;
+  score++;
   return entities;
 };
 
@@ -60,6 +52,29 @@ const dropBall = (entities) => {
     entities[currentBall].color = '#' + randomColor();
     Matter.Body.setPosition(entities[currentBall].body, { x: randInt(0, width), y: -entitySize });
     currentBall++;
+    score++;
+  }
+
+  for (let i = 0; i < 16; i++) {
+    if (Matter.Collision.collides(entities["player"].body, entities[i].body) !== null) {
+      Vibration.vibrate();
+    }
+  }
+
+  if (height / 6 * 5 < entities["player"].body.position.y) {
+    //reset and back to home screen
+    Alert.alert(
+      "YOU DIED",
+      "Restart App to play again",
+      [
+        {
+          text: "Cancel",
+          onPress: () => console.log("Cancel Pressed"),
+          style: "cancel"
+        },
+        { text: "OK", onPress: () => console.log("OK Pressed") }
+      ]
+    );
   }
   return entities;
 }
@@ -72,6 +87,14 @@ const movePlayer = (entities) => {
   Matter.Body.setVelocity(entities["player"].body, { x: -tilt * speed, y: 0 });
 
   return entities;
+}
+
+const killPlayer = (entities) => {
+  //if (height < entities["player"].position.y) {
+  //  reset(entities);
+  //  navigation.navigate('HomeScreen');
+  //}
+
 }
 
 const HomeScreen = ({ navigation }) => {
@@ -90,12 +113,15 @@ const HomeScreen = ({ navigation }) => {
   );
 }
 
-const GameScreen = () => {
+const GameScreen = ({ navigation }) => {
   return (
     <GameEngine
       style={styles.game}
       systems={[Physics, dropBall, movePlayer]}
       entities={{
+        navigation: {
+          navigator: navigation
+        },
         physics: {
           engine: engine,
           world: world
@@ -205,6 +231,7 @@ const GameScreen = () => {
       }}
     >
       <StatusBar hidden={true} />
+      <Text>Score: {score}</Text>
     </GameEngine >
   );
 }
