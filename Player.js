@@ -6,8 +6,8 @@ export default class Player extends Component {
     render() {
         const width = this.props.size[0];
         const height = this.props.size[1];
-        const x = this.props.body.position.x - width;
-        const y = this.props.body.position.y - height;
+        const x = this.props.body.position.x - width / 2;
+        const y = this.props.body.position.y - height / 2;
 
         const styles = StyleSheet.create({
             player: {
@@ -18,9 +18,9 @@ export default class Player extends Component {
                 height: 0,
                 backgroundColor: 'transparent',
                 borderStyle: 'solid',
-                borderLeftWidth: height,
-                borderRightWidth: height,
-                borderBottomWidth: width * 2,
+                borderLeftWidth: height / 2,
+                borderRightWidth: height / 2,
+                borderBottomWidth: width,
                 borderLeftColor: 'transparent',
                 borderRightColor: 'transparent',
                 borderBottomColor: this.props.color || 'red'

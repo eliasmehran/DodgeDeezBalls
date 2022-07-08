@@ -17,7 +17,7 @@ export default class Ball extends Component {
                 width: width,
                 height: height,
                 borderRadius: width / 2,
-                backgroundColor: 'red'
+                backgroundColor: this.props.color || 'red'
             }
         })
 
