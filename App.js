@@ -6,29 +6,45 @@ import Matter, { Body } from "matter-js";
 import { GameEngine } from "react-native-game-engine";
 import Player from './Player';
 import Ball from './Ball';
+import { Gyroscope, Accelerometer } from 'expo-sensors';
+import { useState, useEffect } from 'react';
 
 const engine = Matter.Engine.create({ enableSleeping: false });
 const world = engine.world;
+const gravity = world.gravity;
 
 const randInt = (min, max) => { return Math.floor(Math.random() * (max - min + 1) + min) - 1; };
-const randomColor = () => { return Math.floor(Math.random()*16777215).toString(16); }
+const randomColor = () => { return Math.floor(Math.random() * 16777215).toString(16); }
+function round(n) { return Math.floor(n * 100) / 100; }
 
 const { width, height } = Dimensions.get("screen");
-const entitySize = Math.trunc(Math.max(width, height) * 0.025);
+const entitySize = Math.trunc(Math.max(width, height) * 0.03);
 
-const player = Matter.Bodies.trapezoid(width / 2, height / 5 * 3, entitySize, entitySize, 1, { isStatic: true });
-const balls = [];
-for (let i = 0; i < 7; i++) {
-  let ball = Matter.Bodies.circle(width / 8 * i + 1, -height * i, entitySize / 2., { frictionAir: 0.05});
+let player = Matter.Bodies.trapezoid(width / 2, height / 5 * 3, entitySize, entitySize, 1);
+let balls = [];
+for (let i = 0; i < 16; i++) {
+  let ball = Matter.Bodies.circle(width / 8 * i + 1, -height * i, entitySize / 2., { frictionAir: 0.025, restitution: 1.0 });
   balls.push(ball);
   Matter.World.add(world, [balls[i]]);
+}
+
+const reset = () => {
+  player = Matter.Bodies.trapezoid(width / 2, height / 5 * 3, entitySize, entitySize, 1);
+ balls = [];
+for (let i = 0; i < 16; i++) {
+  let ball = Matter.Bodies.circle(width / 8 * i + 1, -height * i, entitySize / 2., { frictionAir: 0.025, restitution: 1.0 });
+  balls.push(ball);
+  Matter.World.add(world, [balls[i]]);
+}
 }
 
 Matter.World.add(world, [player]);
 
 let currentBall = 0;
 let framesDelta = 0;
-let ballInterval = 24;
+const ballInterval = 12;
+let tilt = 0;
+const speed = 15;
 
 const Physics = (entities, { time }) => {
   let engine = entities["physics"].engine;
@@ -40,7 +56,7 @@ const Physics = (entities, { time }) => {
 const dropBall = (entities) => {
   if (ballInterval < framesDelta) {
     framesDelta = 0;
-    if (6 < currentBall) currentBall = 0;
+    if (15 < currentBall) currentBall = 0;
     entities[currentBall].color = '#' + randomColor();
     Matter.Body.setPosition(entities[currentBall].body, { x: randInt(0, width), y: -entitySize });
     currentBall++;
@@ -48,8 +64,14 @@ const dropBall = (entities) => {
   return entities;
 }
 
-const movePlayer = (entities) => { 
+const movePlayer = (entities) => {
+  Body.applyForce(entities["player"].body, entities["player"].body.position, {
+    x: -gravity.x * gravity.scale * entities["player"].body.mass,
+    y: -gravity.y * gravity.scale * entities["player"].body.mass
+  });
+  Matter.Body.setVelocity(entities["player"].body, { x: -tilt * speed, y: 0 });
 
+  return entities;
 }
 
 const HomeScreen = ({ navigation }) => {
@@ -58,7 +80,9 @@ const HomeScreen = ({ navigation }) => {
       <Text style={styles.welcomeText}>Welcome to Dodge Balls!</Text>
       <TouchableOpacity
         style={styles.startButton}
-        onPress={() => navigation.navigate('Game')}
+        onPress={() => {
+          navigation.navigate('Game');
+        }}
       >
         <Text style={styles.startButtonText}>Start</Text>
       </TouchableOpacity>
@@ -70,7 +94,7 @@ const GameScreen = () => {
   return (
     <GameEngine
       style={styles.game}
-      systems={[Physics, dropBall]}
+      systems={[Physics, dropBall, movePlayer]}
       entities={{
         physics: {
           engine: engine,
@@ -123,6 +147,60 @@ const GameScreen = () => {
           size: [entitySize, entitySize],
           color: '#' + randomColor(),
           renderer: Ball
+        },
+        7: {
+          body: balls[7],
+          size: [entitySize, entitySize],
+          color: '#' + randomColor(),
+          renderer: Ball
+        },
+        8: {
+          body: balls[8],
+          size: [entitySize, entitySize],
+          color: '#' + randomColor(),
+          renderer: Ball
+        },
+        9: {
+          body: balls[9],
+          size: [entitySize, entitySize],
+          color: '#' + randomColor(),
+          renderer: Ball
+        },
+        10: {
+          body: balls[10],
+          size: [entitySize, entitySize],
+          color: '#' + randomColor(),
+          renderer: Ball
+        },
+        11: {
+          body: balls[11],
+          size: [entitySize, entitySize],
+          color: '#' + randomColor(),
+          renderer: Ball
+        },
+        12: {
+          body: balls[12],
+          size: [entitySize, entitySize],
+          color: '#' + randomColor(),
+          renderer: Ball
+        },
+        13: {
+          body: balls[13],
+          size: [entitySize, entitySize],
+          color: '#' + randomColor(),
+          renderer: Ball
+        },
+        14: {
+          body: balls[14],
+          size: [entitySize, entitySize],
+          color: '#' + randomColor(),
+          renderer: Ball
+        },
+        15: {
+          body: balls[15],
+          size: [entitySize, entitySize],
+          color: '#' + randomColor(),
+          renderer: Ball
         }
       }}
     >
@@ -134,6 +212,41 @@ const GameScreen = () => {
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+  const [data, setData] = useState({
+    x: 0,
+    y: 0,
+    z: 0,
+  });
+  const [subscription, setSubscription] = useState(null);
+
+  const _slow = () => {
+    Accelerometer.setUpdateInterval(1000);
+  };
+
+  const _fast = () => {
+    Accelerometer.setUpdateInterval(16);
+  };
+
+  const _subscribe = () => {
+    setSubscription(
+      Accelerometer.addListener(accelerometerData => {
+        setData(accelerometerData);
+      })
+    );
+  };
+
+  const _unsubscribe = () => {
+    subscription && subscription.remove();
+    setSubscription(null);
+  };
+
+  useEffect(() => {
+    _subscribe();
+    return () => _unsubscribe();
+  }, []);
+
+  tilt = data.x;
+
   return (
     <NavigationContainer>
       <Stack.Navigator>
