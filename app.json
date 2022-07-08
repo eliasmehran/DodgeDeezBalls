@@ -1,7 +1,8 @@
 {
   "expo": {
     "name": "dodge-the-balls",
-    "slug": "dodge-the-balls",
+    "slug": "dodgedeezballs",
+    "owner": "elimeh",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
